@@ -1,14 +1,17 @@
 import java.util.*;
 
 public class AStar {
-    public static List<Node> findPath(Grid grid) {
-        List<Node> finalPath = new ArrayList<>();
+    public static List<INode> findPath(IGrid grid) {
 
-        PriorityQueue<Node> openList = new PriorityQueue<>();
-        List<Node> closedList = new ArrayList<>();
+        long startTime = System.nanoTime();
 
-        Node startNode = grid.getStartNode();
-        Node endNode = grid.getEndNode();
+        List<INode> finalPath = new ArrayList<>();
+
+        PriorityQueue<INode> openList = new PriorityQueue<>();
+        Map<INode, Integer> visited = new HashMap<>();
+
+        INode startNode = grid.getStartNode();
+        INode endNode = grid.getEndNode();
 
         if (startNode == null || endNode == null) return null;
 
@@ -16,41 +19,27 @@ public class AStar {
 
         boolean found = false;
 
-        while (!found) {
-            //System.out.println("yee");
-            Node current = openList.poll();
-            for (Node n : current.getNeighbors()) {
-                //System.out.println(n.getPosition() + ", " + endNode.getPosition());
-                if (n.getPosition().equals(endNode.getPosition())) {
-                    closedList.add(n);
-                    found = true;
-                    break;
-                }
-                if (closedList.contains(n)) {
-                    int idx = closedList.indexOf(n);
-                    if (closedList.get(idx).getFCost() > n.getFCost()) {
-                        closedList.remove(idx);
-                        openList.offer(n);
-                    }
-                } else {
+        while (!openList.isEmpty()) {
+            INode current = openList.peek();
+
+            if (current.equals(endNode)) {
+                found = true;
+                break;
+            }
+
+            openList.poll();
+
+            for (INode n : current.getNeighbors()) {
+                if (!visited.containsKey(n) || n.getGCost() < visited.get(n)) {
+                    visited.put(n, n.getGCost());
                     openList.offer(n);
                 }
             }
-            closedList.add(current);
         }
 
-        //System.out.println("doot");
-        //System.out.println(closedList.size());
-
         if (found) {
-//            for (int i = closedList.size()-1; i >= 0; i--) {
-//                System.out.println(i);
-//                finalPath.add(closedList.get(i));
-//            }
-            Node next = closedList.get(closedList.size()-1);
-            finalPath.add(next);
+            INode next = openList.peek();
             while ((next = next.getPrevNode()) != null) {
-                //System.out.println("weee");
                 finalPath.add(next);
             }
             finalPath.remove(finalPath.size()-1);
@@ -58,8 +47,9 @@ public class AStar {
 
         Collections.reverse(finalPath);
 
-        //System.out.println(found);
-        //System.out.println("done");
+        long elapsedTime = System.nanoTime()-startTime;
+
+        System.out.println("Calculated path in " + (elapsedTime * Math.pow(10, -9)) + " seconds.");
 
         return finalPath;
     }

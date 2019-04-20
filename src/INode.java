@@ -1,8 +1,10 @@
+import java.util.List;
+
 public interface INode {
 
     INode getPrevNode();
 
-    INode[] getNeighbors();
+    List<INode> getNeighbors();
 
     int getGCost();
 
