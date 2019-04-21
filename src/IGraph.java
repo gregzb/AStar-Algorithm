@@ -1,4 +1,4 @@
-public interface IGrid {
+public interface IGraph {
     INode getStartNode();
     INode getEndNode();
 }

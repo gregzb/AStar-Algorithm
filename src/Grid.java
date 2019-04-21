@@ -4,60 +4,80 @@ import processing.core.PVector;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Grid implements IGrid{
+public class Grid implements IGraph {
     private PApplet p;
 
     public final int[] colors;
 
     int[][] grid;
+    float gridSize;
 
     private List<Renderable> renderables;
-    private Character mainChar;
 
-    private PVector goalPos;
+    private PVector startPos;
+    private PVector endPos;
 
     public Grid(PApplet p, int width, int height, int gridSize) { //implement this
         this.p = p;
         this.grid = new int[height][width];
+        this.gridSize = gridSize;
 
         colors = new int[] {p.color(255), p.color(0), p.color(0, 80, 255), p.color(255, 80, 0), p.color(0, 255, 0)};
         renderables = new ArrayList<>();
-        mainChar = new Character(new PVector(p.width/2, p.height/2));
-        renderables.add(mainChar);
     }
 
-    public void drawSquare(float gridSize, float x, float y, int color) {
+    public void addRenderable(Renderable r) {
+        renderables.add(r);
+    }
+
+    public List<Renderable> getRenderables() {
+        return renderables;
+    }
+
+    public void drawSquare(float x, float y, int color) {
         p.fill(color);
         p.rect(x*gridSize, y*gridSize, gridSize, gridSize);
     }
 
-    public void render(int gridSize, List<INode> path) {
+    public void render() {
 
         //Draw normal squares
         for (int row = 0; row < getHeight(); row++) {
             for (int col = 0; col < getWidth(); col++) {
-                drawSquare(gridSize, col, row, colors[grid[row][col]]);
+                drawSquare(col, row, colors[grid[row][col]]);
             }
         }
 
-        //Path rendering
-        if (path != null) {
-            for (INode iN : path) {
-                Node n = (Node) iN;
-                drawSquare(gridSize, n.getPosition().x, n.getPosition().y, colors[4]);
-            }
+//        //Path rendering
+//        if (path != null) {
+//            for (INode iN : path) {
+//                Node n = (Node) iN;
+//                drawSquare(n.getPosition().x, n.getPosition().y, colors[4]);
+//            }
+//        }
+
+
+        //Render renderables, like characters
+        for (Renderable r : renderables) {
+            r.render();
         }
 
         //Gridlines
         p.stroke(0);
-        renderGridLines(gridSize);
+        renderGridLines();
     }
 
-    public void render(Renderable r) {
-        drawSquare(gridSize, n.getPosition().x, n.getPosition().y, colors[4]);
+//    public void render(Renderable r) {
+//        drawSquare(gridSize, r.getPosition().x, r.getPosition().y, r.getColor());
+//        //System.out.println(r.getPosition());
+//    }
+
+    public void render(PVector position, int color) {
+        drawSquare(position.x, position.y, color);
+        //System.out.println(r.getPosition());
     }
 
-    public void renderGridLines(int gridSize) {
+    public void renderGridLines() {
         for (int x = 0; x < getWidth()+1; x++) {
             p.line(x * gridSize, 0, x * gridSize, p.height);
         }
@@ -109,16 +129,36 @@ public class Grid implements IGrid{
         return prevVal;
     }
 
-    public Node getStartNode() {
-        if (mainChar.getPosition() == null) return null;
+    public PVector setStartPos(PVector pos) {
+        PVector temp = this.startPos;
+        this.startPos = pos;
+        return temp;
+    }
 
-        return new Node(this, null, mainChar.getPosition().copy(), 0);
+    public PVector setEndPos(PVector pos) {
+        PVector temp = this.endPos;
+        this.endPos = pos;
+        return temp;
+    }
+
+    public PVector getStartPos() {
+        return this.startPos;
+    }
+
+    public PVector getEndPos() {
+        return this.endPos;
+    }
+
+    public Node getStartNode() {
+        if (startPos == null) return null;
+
+        return new Node(this, null, startPos.copy(), 0);
     }
 
     public Node getEndNode() {
-        if (goalPos == null) return null;
+        if (endPos == null) return null;
 
-        return new Node(this, null, goalPos.copy(), 0);
+        return new Node(this, null, endPos.copy(), 0);
     }
 
     public static int manhattanDistance(PVector a, PVector b) {

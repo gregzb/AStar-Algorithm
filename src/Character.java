@@ -23,6 +23,6 @@ public class Character implements Renderable{
 
     @Override
     public void render() {
-        grid.render(this);
+        grid.render(getPosition(), color);
     }
 }

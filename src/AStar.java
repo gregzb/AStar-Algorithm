@@ -1,7 +1,7 @@
 import java.util.*;
 
 public class AStar {
-    public static List<INode> findPath(IGrid grid) {
+    public static List<INode> findPath(IGraph grid) {
 
         long startTime = System.nanoTime();
 
@@ -39,17 +39,18 @@ public class AStar {
 
         if (found) {
             INode next = openList.peek();
+            finalPath.add(next);
             while ((next = next.getPrevNode()) != null) {
                 finalPath.add(next);
             }
-            finalPath.remove(finalPath.size()-1);
+            //finalPath.remove(finalPath.size()-1);
         }
 
         Collections.reverse(finalPath);
 
         long elapsedTime = System.nanoTime()-startTime;
 
-        System.out.println("Calculated path in " + (elapsedTime * Math.pow(10, -9)) + " seconds.");
+        //System.out.println("Calculated path in " + (elapsedTime * Math.pow(10, -9)) + " seconds.");
 
         return finalPath;
     }

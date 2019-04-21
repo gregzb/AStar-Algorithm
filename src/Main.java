@@ -4,6 +4,7 @@ import processing.core.PVector;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Main extends PApplet {
@@ -14,7 +15,19 @@ public class Main extends PApplet {
     private boolean prevMousePressed;
     private boolean prevKeyPressed;
 
-    List<INode> path;
+    private List<INode> path;
+
+    private Path pathRenderable;
+    private Character mainChar;
+    private PVector goalPos;
+
+    private double lastTime;
+    private double deltaTime = .01;
+
+    private boolean editing = false;
+
+    private double defaultNextPosTime = .1;
+    private double nextPosCounter = defaultNextPosTime;
 
     public static void main(String[] args) {
         PApplet.main("Main");
@@ -25,69 +38,75 @@ public class Main extends PApplet {
     }
 
     public void setup() {
-        resize(50, 50);
+        resize(50, 50, GRID_SIZE);
+
+        path = new ArrayList<>();
+
+        pathRenderable = new Path(grid, path, color(40, 220, 40));
+        grid.addRenderable(pathRenderable);
+
+        mainChar = new Character(grid, new PVector(grid.getWidth()/2, grid.getHeight()/2), color(255, 0, 0));
+        grid.addRenderable(mainChar);
+
+        lastTime = System.nanoTime();
+    }
+
+    public boolean inBounds(PVector vector) {
+        return vector.x < grid.getWidth() && vector.x >= 0 && vector.y >= 0 && vector.y < grid.getHeight();
+    }
+
+    public void updatePath() {
+        path = AStar.findPath(grid);
+        pathRenderable.setPositions(path);
     }
 
     public void draw() {
+        deltaTime = (System.nanoTime() - lastTime) * Math.pow(10, -9);
+        lastTime = System.nanoTime();
+
         background(255);
 
-        PVector mouseGridLocation = new PVector(mouseX / GRID_SIZE, mouseY / GRID_SIZE);
-//        if (mouseGridLocation.x < grid.getWidth() && mouseGridLocation.x >= 0 && mouseGridLocation.y < grid.getHeight() && mouseGridLocation.y >= 0) {
-//            if (mousePressed && !prevMousePressed) {
-//                path = null;
-//                if (mouseButton == LEFT) {
-//                    if (keyPressed && (key == 's' || key == 'S')) {
-//                        grid.setStartPos(mouseGridLocation);
-//                        //System.out.println("LEFT: " + mouseGridLocation);
-//                    } else if (keyPressed && (key == 'e' || key == 'E')) {
-//                        grid.setEndPos(mouseGridLocation);
-//                        //System.out.println("RIGHT: " + mouseGridLocation);
-//                    }
-//                }
-//                if (!keyPressed) {
-//                    if (mouseButton == LEFT) {
-//                        grid.setPassable(mouseGridLocation, false);
-//                    } else if (mouseButton == RIGHT) {
-//                        grid.setPassable(mouseGridLocation, true);
-//                    }
-//                }
-//            } else if (mousePressed && !keyPressed) {
-//                path = null;
-//                if (mouseButton == LEFT) {
-//                    grid.setPassable(mouseGridLocation, false);
-//                    for (int i = 0; i < Node.dirs.length/2; i+=2) {
-//                        PVector newPos = mouseGridLocation.copy().add(Node.dirs[i], Node.dirs[i + 1]);
-//                        if (newPos.x >= 0 && newPos.x < grid.getWidth() && newPos.y >= 0 && newPos.y < grid.getHeight())
-//                        grid.setPassable(newPos, false);
-//                    }
-//                } else if (mouseButton == RIGHT) {
-//                    grid.setPassable(mouseGridLocation, true);
-//                    for (int i = 0; i < Node.dirs.length/2; i+=2) {
-//                        PVector newPos = mouseGridLocation.copy().add(Node.dirs[i], Node.dirs[i + 1]);
-//                        if (newPos.x >= 0 && newPos.x < grid.getWidth() && newPos.y >= 0 && newPos.y < grid.getHeight())
-//                        grid.setPassable(newPos, true);
-//                    }
-//                }
-//            }
-//        }
-//
-//        if (keyPressed && !prevKeyPressed) {
-//            path = null;
-//            if (key == ' ') {
-//                path = AStar.findPath(grid);
-//            } else if (key == 'R' || key == 'r') {
-//                grid = new Grid(this, grid.getWidth(), grid.getHeight());
-//            } else if (key == 'L' || key == 'l') {
-//                grid = new Grid(this, grid.getWidth(), grid.getHeight());
-//                loadMaze("maze.txt");
-//            }
-//        }
-//
-//        if (prevMousePressed && !mousePressed) {
-//            path = AStar.findPath(grid);
-//        }
+        grid.setStartPos(mainChar.getPosition().copy());
 
-        grid.render(GRID_SIZE, path);
+        PVector mouseGridLocation = new PVector(mouseX / GRID_SIZE, mouseY / GRID_SIZE);
+
+        pathRenderable.setPositions(path);
+
+        if (inBounds(mouseGridLocation)) {
+            if (mousePressed) {
+                pathRenderable.setPositions(new ArrayList<>());
+                int fillVal = mouseButton == LEFT ? 1 : 0;
+                grid.set(mouseGridLocation.copy(), fillVal);
+                for (int i = 0; i < Node.dirs.length/2; i+=2) {
+                    PVector newPos = mouseGridLocation.copy().add(Node.dirs[i], Node.dirs[i + 1]);
+                    if (inBounds(newPos)) grid.set(newPos, fillVal);
+                }
+                editing = true;
+            } else if (!mousePressed && prevMousePressed) {
+                updatePath();
+                editing = false;
+            }
+            if (keyPressed) {
+                if (key == ' ') {
+                    grid.setEndPos(mouseGridLocation.copy());
+                    updatePath();
+                    editing = false;
+                }
+            }
+        }
+
+        if (!editing) {
+            while (nextPosCounter < 0) {
+                if (path != null && path.size() > 0) {
+                    PVector newPos = ((Node)path.remove(0)).getPosition();
+                    mainChar.setPosition(newPos);
+                }
+                nextPosCounter += defaultNextPosTime;
+            }
+            nextPosCounter-= deltaTime;
+        }
+
+        grid.render();
 
         prevMousePressed = mousePressed;
         prevKeyPressed = keyPressed;
@@ -145,8 +164,8 @@ public class Main extends PApplet {
 //        }
 //    }
 
-    void resize(int width, int height) {
-        grid = new Grid(this, width, height);
-        surface.setSize(grid.getWidth() * GRID_SIZE, grid.getHeight() * GRID_SIZE);
+    void resize(int width, int height, int gridSize) {
+        grid = new Grid(this, width, height, gridSize);
+        surface.setSize(grid.getWidth() * gridSize, grid.getHeight() * gridSize);
     }
 }
